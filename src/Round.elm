@@ -22,21 +22,29 @@ recordGuess round input =
         updatedRound =
             { round
                 | guesses = guess :: round.guesses
-                , currentCard =
-                    List.tail round.deck
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault { question = "", answer = "" }
             }
     in
         if Guess.isCorrect guess then
             { updatedRound
-                | numberCorrect = updatedRound.numberCorrect + 1
-                , deck = Maybe.withDefault [] (List.tail updatedRound.deck)
+                | numberCorrect = round.numberCorrect + 1
+                , currentCard =
+                    List.tail round.deck
+                        |> Maybe.andThen List.head
+                        |> Maybe.withDefault Deck.defaultCard
+                , deck =
+                    List.tail round.deck
+                        |> Maybe.withDefault []
             }
         else
-            { updatedRound
-                | deck = List.append (List.drop 1 updatedRound.deck) (List.take 1 updatedRound.deck)
-            }
+            let
+                newDeck =
+                    Deck.topCardToBottom (.deck round)
+            in
+                { updatedRound
+                    | deck = newDeck
+                    , currentCard =
+                        Deck.topCard newDeck
+                }
 
 
 percentCorrect : Round -> Float
