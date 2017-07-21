@@ -10,29 +10,16 @@ import Card
 suite : Test
 suite =
     describe "Deck"
-        [ describe "cards"
-            [ test "it takes a list of cards to act as deck" <|
-                \_ ->
-                    let
-                        givenCards =
-                            [ Card.new "How much does a Polar Bear weigh?" "Enough to break the ice!"
-                            , Card.new "How goes it?" "Fine, thank you."
-                            ]
-                    in
-                        new givenCards
-                            |> cards
-                            |> Expect.equal givenCards
-            ]
-        , describe "count"
+        [ describe "count"
             [ test "it returns the number of cards" <|
                 \_ ->
                     let
-                        givenCards =
-                            [ Card.new "How much does a Polar Bear weigh?" "Enough to break the ice!"
-                            , Card.new "How goes it?" "Fine, thank you."
+                        deck =
+                            [ { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
+                            , { question = "How goes it?", answer = "Fine, thank you." }
                             ]
                     in
-                        new givenCards
+                        deck
                             |> count
                             |> Expect.equal 2
             ]

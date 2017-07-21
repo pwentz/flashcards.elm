@@ -3,20 +3,10 @@ module Deck exposing (..)
 import Card exposing (Card)
 
 
-type Deck
-    = Deck (List Card)
-
-
-new : List Card -> Deck
-new cards =
-    Deck cards
-
-
-cards : Deck -> List Card
-cards (Deck cs) =
-    cs
+type alias Deck =
+    List Card
 
 
 count : Deck -> Int
-count (Deck cs) =
-    List.length cs
+count cards =
+    List.length cards
