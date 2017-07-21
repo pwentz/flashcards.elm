@@ -11,12 +11,6 @@ cards =
     , { question = "Joe Louis became World Champion in which year?"
       , answer = "1937"
       }
-    , { question = "What is the capital of Belize?"
-      , answer = "Belmopan"
-      }
-    , { question = "What card game is featured in the novel 'Casino Royale'?"
-      , answer = "Baccarat"
-      }
     , { question = "Both Thomas Jefferson and John Adams died on what date in 1826?"
       , answer = "July 4th"
       }

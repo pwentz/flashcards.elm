@@ -17,8 +17,8 @@ defaultCard =
     { question = "", answer = "" }
 
 
-topCardToBottom : Deck -> Deck
-topCardToBottom deck =
+rotate : Deck -> Deck
+rotate deck =
     List.append (List.drop 1 deck) (List.take 1 deck)
 
 

@@ -5,6 +5,7 @@ import Html.Events exposing (onInput, onClick, on, keyCode)
 import Html.Attributes exposing (..)
 import Json.Decode as Json
 import Round exposing (Round)
+import Guess
 import Deck
 import Samples
 import Styles
@@ -30,18 +31,19 @@ type alias Model =
     }
 
 
+initialRound =
+    { deck = Samples.cards
+    , guesses = []
+    }
+
+
 initialModel : Model
 initialModel =
-    { round =
-        { deck = Samples.cards
-        , guesses = []
-        , currentCard = Deck.topCard Samples.cards
-        , numberCorrect = 0
-        }
+    { round = initialRound
     , input = ""
     , message = "Enter your response and press ENTER!"
     , display =
-        Deck.topCard Samples.cards
+        Round.currentCard initialRound
             |> .question
     }
 
@@ -127,18 +129,6 @@ type Msg
     | NextQuestion
 
 
-checkIfCardsLeft : Model -> Model
-checkIfCardsLeft model =
-    if Deck.count ((.deck << .round) model) == 0 then
-        let
-            congrats =
-                "Congratulations, you posted a percentage of "
-        in
-            { model | display = congrats ++ (toString (Round.percentCorrect (.round model))) ++ "%" }
-    else
-        { model | display = (.question << .currentCard << .round) model }
-
-
 update : Msg -> Model -> Model
 update msg model =
     case msg of
@@ -146,56 +136,85 @@ update msg model =
             { model | input = userInput }
 
         RecordGuess ->
-            if Deck.count ((.deck << .round) model) == 0 then
-                { model
-                    | input = ""
-                    , message = "Game over!"
-                }
-            else
-                let
-                    updatedRound =
-                        Round.recordGuess (.round model) (.input model)
-                in
-                    if (((.numberCorrect << .round) model) == (.numberCorrect updatedRound)) then
-                        checkIfCardsLeft
-                            { model
-                                | input = ""
-                                , round = updatedRound
-                                , message = "Incorrect!"
+            case model.round.deck of
+                [] ->
+                    { model
+                        | input = ""
+                    }
+
+                top :: moreCards ->
+                    let
+                        guess =
+                            { response = model.input
+                            , card = top
                             }
-                    else
-                        checkIfCardsLeft
+
+                        updatedModel =
                             { model
-                                | input = ""
-                                , round = updatedRound
-                                , message = "Correct!"
+                                | round = Round.recordGuess model.round guess
+                                , input = ""
+                            }
+
+                        congratulatoryMsg =
+                            "Congratulations, you posted a percentage of "
+                                ++ (toString (Round.percentCorrect updatedModel.round))
+                                ++ "%"
+
+                        nextDisplay =
+                            moreCards
+                                |> List.head
+                                |> Maybe.withDefault top
+                                |> .question
+                    in
+                        if (Guess.isCorrect guess) then
+                            let
+                                isRoundOver =
+                                    updatedModel.round.deck
+                                        |> List.length
+                                        |> ((==) 0)
+                            in
+                                if isRoundOver then
+                                    { updatedModel
+                                        | message = "Game Over!"
+                                        , display =
+                                            congratulatoryMsg
+                                    }
+                                else
+                                    { updatedModel
+                                        | message = "Correct!"
+                                        , display = nextDisplay
+                                    }
+                        else
+                            { updatedModel
+                                | message = "Incorrect!"
+                                , display = nextDisplay
                             }
 
         SeeAnswer ->
-            if Deck.count ((.deck << .round) model) == 0 then
+            if Round.isOver model.round then
                 model
             else
-                { model | display = (.answer << .currentCard << .round) model }
+                { model | display = (.answer << Round.currentCard << .round) model }
 
         NextQuestion ->
-            if Deck.count ((.deck << .round) model) == 0 then
-                model
-            else
-                let
-                    round =
-                        (.round model)
+            case model.round.deck of
+                [] ->
+                    model
 
-                    newDeck =
-                        Deck.topCardToBottom (.deck round)
-                in
-                    { round =
-                        { round
-                            | deck = newDeck
-                            , currentCard = Deck.topCard newDeck
+                top :: moreCards ->
+                    let
+                        round =
+                            model.round
+                    in
+                        { round =
+                            { round
+                                | deck = List.append moreCards [ top ]
+                            }
+                        , input = ""
+                        , message = ""
+                        , display =
+                            moreCards
+                                |> List.head
+                                |> Maybe.withDefault top
+                                |> .question
                         }
-                    , display =
-                        Deck.topCard newDeck
-                            |> .question
-                    , input = ""
-                    , message = ""
-                    }

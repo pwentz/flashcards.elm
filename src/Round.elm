@@ -8,17 +8,23 @@ import Guess exposing (Guess)
 type alias Round =
     { deck : Deck
     , guesses : List Guess
-    , currentCard : Card
-    , numberCorrect : Int
     }
 
 
-recordGuess : Round -> String -> Round
-recordGuess round input =
-    let
-        guess =
-            { response = input, card = round.currentCard }
 
+-- DO WE NEED A DEFAULT CARD STILL?
+
+
+currentCard : Round -> Card
+currentCard round =
+    .deck round
+        |> List.head
+        |> Maybe.withDefault Deck.defaultCard
+
+
+recordGuess : Round -> Guess -> Round
+recordGuess round guess =
+    let
         updatedRound =
             { round
                 | guesses = guess :: round.guesses
@@ -26,27 +32,27 @@ recordGuess round input =
     in
         if Guess.isCorrect guess then
             { updatedRound
-                | numberCorrect = round.numberCorrect + 1
-                , currentCard =
-                    List.tail round.deck
-                        |> Maybe.andThen List.head
-                        |> Maybe.withDefault Deck.defaultCard
-                , deck =
-                    List.tail round.deck
-                        |> Maybe.withDefault []
+                | deck =
+                    List.drop 1 round.deck
             }
         else
-            let
-                newDeck =
-                    Deck.topCardToBottom (.deck round)
-            in
-                { updatedRound
-                    | deck = newDeck
-                    , currentCard =
-                        Deck.topCard newDeck
-                }
+            { updatedRound | deck = Deck.rotate (.deck round) }
+
+
+isOver : Round -> Bool
+isOver round =
+    .deck round
+        |> List.length
+        |> ((==) 0)
 
 
 percentCorrect : Round -> Float
 percentCorrect round =
-    toFloat round.numberCorrect / (toFloat (List.length round.guesses)) * 100
+    toFloat (numberOfCorrectGuesses round) / (toFloat (List.length round.guesses)) * 100
+
+
+numberOfCorrectGuesses : Round -> Int
+numberOfCorrectGuesses round =
+    round.guesses
+        |> List.filter Guess.isCorrect
+        |> List.length
