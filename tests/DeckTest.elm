@@ -37,4 +37,23 @@ suite =
                     in
                         Expect.equal (Just cards) cardsFromDeck
             ]
+        , describe "new"
+            [ test "it takes an array and returns a Deck" <|
+                \_ ->
+                    let
+                        cards =
+                            [ { question = "When is the last time the Cubs won the World Series", answer = "2016" }
+                            , { question = "Do you know the muffin man?", answer = "No." }
+                            ]
+
+                        deck =
+                            Deck cards
+                    in
+                        new cards
+                            |> Expect.equal deck
+            , test "it returns an EmptyDeck if passed an empty array" <|
+                \_ ->
+                    new []
+                        |> Expect.equal EmptyDeck
+            ]
         ]
