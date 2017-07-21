@@ -4,7 +4,7 @@ import Expect exposing (Expectation)
 import Fuzz exposing (Fuzzer, list, int, string)
 import Test exposing (..)
 import Card
-import Guess
+import Guess exposing (Guess(CorrectGuess))
 import Deck exposing (Deck(EmptyDeck, Deck))
 import Round exposing (..)
 
@@ -23,7 +23,7 @@ suite =
                             Deck [ topCard ]
 
                         newRound =
-                            { deck = Deck [], guesses = [], currentCard = Just topCard }
+                            { deck = deck, guesses = [], currentCard = Just topCard }
                     in
                         new deck
                             |> Expect.equal (Just newRound)
@@ -36,121 +36,140 @@ suite =
                     new (Deck [])
                         |> Expect.equal Nothing
             ]
+        , describe "recordGuess"
+            [ test "it removes the top card of deck if guess is correct" <|
+                \_ ->
+                    let
+                        topCard =
+                            { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
 
-        -- describe "recordGuess"
-        -- [
-        -- test "it removes the top card of deck if guess is correct" <|
-        --   \_ ->
-        --       let
-        --           topCard =
-        --               { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --           deck =
-        --               [ topCard
-        --               , { question = "How goes it?", answer = "Fine, thank you." }
-        --               ]
-        --           round =
-        --               { deck = deck, guesses = [], currentCard = topCard }
-        --       in
-        --           recordGuess round "Enough to break the ice!"
-        --               |> .deck
-        --               |> Deck.count
-        --               |> Expect.equal 1
-        -- , test "it places the top card of deck on the bottom if guess is incorrect" <|
-        --     \_ ->
-        --         let
-        --             topCard =
-        --                 { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --             deck =
-        --                 [ topCard
-        --                 , { question = "How goes it?", answer = "Fine, thank you." }
-        --                 ]
-        --             round =
-        --                 { deck = deck, guesses = [], currentCard = topCard }
-        --         in
-        --             recordGuess round "Cool"
-        --                 |> .deck
-        --                 |> List.tail
-        --                 |> Expect.equal (Just [ topCard ])
-        -- , test "it sets the current card to equal the next card from the deck" <|
-        --     \_ ->
-        --         let
-        --             topCard =
-        --                 { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --             nextCard =
-        --                 { question = "How goes it?", answer = "Fine, thank you." }
-        --             deck =
-        --                 [ topCard
-        --                 , nextCard
-        --                 ]
-        --             round =
-        --                 { deck = deck, guesses = [], currentCard = topCard }
-        --         in
-        --             recordGuess round "I'm not too sure"
-        --                 |> .currentCard
-        --                 |> Expect.equal nextCard
-        -- , test "it creates a Guess record and updates guesses array" <|
-        --     \_ ->
-        --         let
-        --             topCard =
-        --                 { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --             deck =
-        --                 [ topCard
-        --                 , { question = "How goes it?", answer = "Fine, thank you." }
-        --                 ]
-        --             guess =
-        --                 { response = "Cool", card = topCard }
-        --             round =
-        --                 { deck = deck, guesses = [], currentCard = topCard }
-        --         in
-        --             recordGuess round "Cool"
-        --                 |> .guesses
-        --                 |> Expect.equal [ guess ]
-        -- , test "it puts a blank card as next currentCard when passed a round with an empty deck" <|
-        --     \_ ->
-        --         let
-        --             topCard =
-        --                 { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --             guess =
-        --                 { response = "Cool", card = topCard }
-        --             round =
-        --                 { deck = [], guesses = [], currentCard = topCard }
-        --         in
-        --             recordGuess round "Cool"
-        --                 |> .currentCard
-        --                 |> Expect.equal { question = "", answer = "" }
-        -- ]
-        -- , describe "percentCorrect"
-        -- [ test "it returns the pct of guesses that are correct" <|
-        --     \_ ->
-        --         let
-        --             topCard =
-        --                 { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --             deck =
-        --                 [ topCard
-        --                 , { question = "How goes it?", answer = "Fine, thank you." }
-        --                 ]
-        --             round =
-        --                 { deck = deck, guesses = [], currentCard = topCard }
-        --         in
-        --             recordGuess round "Enough to break the ice!"
-        --                 |> percentCorrect
-        --                 |> Expect.equal 100.0
-        -- ]
-        -- , describe "numberOfCorrectGuesses" <|
-        -- [ test "it returns the number of guesses made correctly" <|
-        --     \_ ->
-        --         let
-        --             topCard =
-        --                 { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-        --             deck =
-        --                 [ topCard
-        --                 , { question = "How goes it?", answer = "Fine, thank you." }
-        --                 ]
-        --             round =
-        --                 { deck = deck, guesses = [], currentCard = topCard }
-        --         in
-        --             recordGuess round "Enough to break the ice!"
-        --                 |> numberOfCorrectGuesses
-        --                 |> Expect.equal 1
-        -- ]
+                        deck =
+                            (Deck
+                                [ topCard
+                                , { question = "How goes it?", answer = "Fine, thank you." }
+                                ]
+                            )
+
+                        round =
+                            { deck = deck, guesses = [], currentCard = topCard }
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "Enough to break the ice!")
+                            |> Maybe.map .deck
+                            |> Maybe.map Deck.count
+                            |> Expect.equal (Just 1)
+            , test "it places the top card of deck on the bottom if guess is incorrect" <|
+                \_ ->
+                    let
+                        topCard =
+                            { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
+
+                        nextCard =
+                            { question = "How goes it?", answer = "Fine, thank you." }
+
+                        deck =
+                            (Deck
+                                [ topCard
+                                , nextCard
+                                ]
+                            )
+
+                        round =
+                            { deck = deck, guesses = [], currentCard = topCard }
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "Cool")
+                            |> Maybe.map .deck
+                            |> Expect.equal (Just (Deck [ nextCard, topCard ]))
+            , test "it sets the current card to equal the next card from the deck" <|
+                \_ ->
+                    let
+                        topCard =
+                            { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
+
+                        nextCard =
+                            { question = "How goes it?", answer = "Fine, thank you." }
+
+                        deck =
+                            Deck ([ topCard, nextCard ])
+
+                        round =
+                            { deck = deck, guesses = [], currentCard = topCard }
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "I'm not too sure")
+                            |> Maybe.andThen .currentCard
+                            |> Expect.equal (Just nextCard)
+            , test "it creates a Guess record and updates guesses array" <|
+                \_ ->
+                    let
+                        topCard =
+                            { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
+
+                        deck =
+                            Deck
+                                ([ topCard
+                                 , { question = "How goes it?", answer = "Fine, thank you." }
+                                 ]
+                                )
+
+                        guess =
+                            Guess.new "cool" topCard
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "Cool")
+                            |> Maybe.map .guesses
+                            |> Expect.equal (Just [ guess ])
+            , test "it returns Nothing when round has no current card" <|
+                \_ ->
+                    let
+                        round =
+                            { deck = EmptyDeck, guesses = [], currentCard = Nothing }
+                    in
+                        recordGuess "Cool" round
+                            |> Expect.equal Nothing
+            , test "it sets its currentCard to Nothing if only one card left in deck and answer is correct" <|
+                \_ ->
+                    let
+                        deck =
+                            Deck
+                                ([ { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" } ])
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "Enough to break the ice!")
+                            |> Expect.equal (Just { deck = Deck [], guesses = [ CorrectGuess ], currentCard = Nothing })
+            , test "it does not change the currentCard when one card left in deck and answer is incorrect" <|
+                \_ ->
+                    let
+                        card =
+                            { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
+
+                        deck =
+                            Deck
+                                ([ card ])
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "Wrong")
+                            |> Maybe.andThen .currentCard
+                            |> Expect.equal (Just card)
+            ]
+        , describe "percentCorrect"
+            [ test "it returns the pct of guesses that are correct" <|
+                \_ ->
+                    let
+                        topCard =
+                            { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
+
+                        deck =
+                            Deck
+                                ([ topCard
+                                 , { question = "How goes it?", answer = "Fine, thank you." }
+                                 ]
+                                )
+                    in
+                        new deck
+                            |> Maybe.andThen (recordGuess "Enough to break the ice!")
+                            |> Maybe.map percentCorrect
+                            |> Expect.equal (Just 100.0)
+            ]
         ]

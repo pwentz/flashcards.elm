@@ -16,6 +16,39 @@ new cards =
         Deck cards
 
 
+count : Deck -> Int
+count deck =
+    case deck of
+        EmptyDeck ->
+            0
+
+        Deck xs ->
+            List.length xs
+
+
+topCard : Deck -> Maybe Card
+topCard deck =
+    case deck of
+        EmptyDeck ->
+            Nothing
+
+        Deck xs ->
+            List.head xs
+
+
+deckTail : Deck -> List Card
+deckTail deck =
+    case deck of
+        EmptyDeck ->
+            []
+
+        Deck [] ->
+            []
+
+        Deck (x :: xs) ->
+            xs
+
+
 
 -- getCards : Deck -> Maybe (List Card)
 -- getCards deck =
