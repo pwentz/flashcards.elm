@@ -5,69 +5,102 @@ import Card exposing (Card)
 import Guess exposing (Guess(IncorrectGuess, CorrectGuess))
 
 
-type alias Round =
-    { deck : Deck
-    , guesses : List Guess
-    , currentCard : Maybe Card
-    }
+type Round
+    = FinishedRound { percentCorrect : Float }
+    | RoundInProgress
+        { deck : Deck
+        , guesses : List Guess
+        , currentCard : Card
+        }
 
 
-new : Deck -> Maybe Round
+new : Deck -> Round
 new deck =
     case deck of
         EmptyDeck ->
-            Nothing
+            (FinishedRound { percentCorrect = 0.0 })
 
         Deck [] ->
-            Nothing
+            (FinishedRound { percentCorrect = 0.0 })
 
         Deck ((x :: xs) as cards) ->
-            Just
+            (RoundInProgress
                 { deck = Deck cards
                 , guesses = []
-                , currentCard = Just x
+                , currentCard = x
                 }
+            )
 
 
-recordGuess : String -> Round -> Maybe Round
-recordGuess input round =
-    case (.currentCard round) of
-        Nothing ->
+getDeck : Round -> Maybe Deck
+getDeck round =
+    case round of
+        FinishedRound _ ->
             Nothing
 
-        Just card ->
+        RoundInProgress { deck, guesses, currentCard } ->
+            Just deck
+
+
+getCurrentCard : Round -> Maybe Card
+getCurrentCard round =
+    case round of
+        FinishedRound _ ->
+            Nothing
+
+        RoundInProgress { deck, guesses, currentCard } ->
+            Just currentCard
+
+
+getGuesses : Round -> Maybe (List Guess)
+getGuesses round =
+    case round of
+        FinishedRound _ ->
+            Nothing
+
+        RoundInProgress { deck, guesses, currentCard } ->
+            Just guesses
+
+
+recordGuess : String -> Round -> Round
+recordGuess input round =
+    case round of
+        FinishedRound _ ->
+            round
+
+        RoundInProgress { deck, guesses, currentCard } ->
             let
                 guess =
-                    Guess.new input card
+                    Guess.new input currentCard
 
-                updatedRound =
-                    { round | guesses = (guess :: (.guesses round)) }
+                updatedGuesses =
+                    guess :: guesses
+
+                nextUp =
+                    List.head (Deck.deckTail deck)
             in
-                case guess of
-                    IncorrectGuess ->
-                        let
-                            newDeck =
-                                Deck (List.append (Deck.deckTail (.deck round)) [ card ])
-                        in
-                            Just
-                                { updatedRound
-                                    | deck = newDeck
-                                    , currentCard = Deck.topCard newDeck
-                                }
-
-                    CorrectGuess ->
-                        Just
-                            { updatedRound
-                                | deck = Deck (Deck.deckTail (.deck round))
-                                , currentCard =
-                                    .deck round
-                                        |> Deck.deckTail
-                                        |> List.head
+                case ( guess, nextUp ) of
+                    ( IncorrectGuess, maybeCard ) ->
+                        RoundInProgress
+                            { deck = Deck (List.append (Deck.deckTail deck) [ currentCard ])
+                            , guesses = updatedGuesses
+                            , currentCard = Maybe.withDefault currentCard maybeCard
                             }
 
+                    ( CorrectGuess, Just card ) ->
+                        RoundInProgress
+                            { deck = Deck (Deck.deckTail deck)
+                            , guesses = updatedGuesses
+                            , currentCard = card
+                            }
 
-percentCorrect : Round -> Float
-percentCorrect round =
+                    ( CorrectGuess, Nothing ) ->
+                        FinishedRound
+                            { percentCorrect = getPercentage updatedGuesses }
+
+
+getPercentage : List Guess -> Float
+getPercentage guesses =
     let
         isCorrect guess =
             case guess of
@@ -78,8 +111,8 @@ percentCorrect round =
                     True
 
         numberCorrect =
-            round.guesses
+            guesses
                 |> List.filter isCorrect
                 |> List.length
     in
-        (toFloat numberCorrect) / toFloat (List.length (.guesses round)) * 100
+        (toFloat numberCorrect) / toFloat (List.length guesses) * 100
