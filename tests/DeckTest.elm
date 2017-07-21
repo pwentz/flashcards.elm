@@ -10,17 +10,31 @@ import Card
 suite : Test
 suite =
     describe "Deck"
-        [ describe "count"
-            [ test "it returns the number of cards" <|
+        [ describe "EmptyDeck"
+            [ test "it has no attributes" <|
+                \_ ->
+                    Expect.equal (EmptyDeck) (EmptyDeck)
+            ]
+        , describe "(not an empty) Deck"
+            [ test "it gets constructed with a list of cards" <|
                 \_ ->
                     let
-                        deck =
-                            [ { question = "How much does a Polar Bear weigh?", answer = "Enough to break the ice!" }
-                            , { question = "How goes it?", answer = "Fine, thank you." }
+                        cards =
+                            [ { question = "When is the last time the Cubs won the World Series", answer = "2016" }
+                            , { question = "Do you know the muffin man?", answer = "No." }
                             ]
+
+                        deck =
+                            Deck cards
+
+                        cardsFromDeck =
+                            case deck of
+                                EmptyDeck ->
+                                    Nothing
+
+                                Deck cs ->
+                                    Just cs
                     in
-                        deck
-                            |> count
-                            |> Expect.equal 2
+                        Expect.equal (Just cards) cardsFromDeck
             ]
         ]

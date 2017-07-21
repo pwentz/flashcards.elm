@@ -10,34 +10,25 @@ import Card
 suite : Test
 suite =
     describe "Guess"
-        [ describe "isCorrect"
-            [ test "it returns True if constructor is a CorrectGuess" <|
+        [ describe "new"
+            [ test "it returns a CorrectGuess if answer on given card matches given response" <|
                 \_ ->
                     let
-                        res =
+                        correctResponse =
                             "Enough to break the ice!"
 
                         card =
-                            { question = "How much does a Polar Bear weigh?"
-                            , answer = res
-                            }
+                            { question = "How much does a polar bear weigh?", answer = correctResponse }
                     in
-                        { response = res, card = card }
-                            |> isCorrect
-                            |> Expect.equal True
-            , test "it returns False if constructor is IncorrectGuess" <|
+                        new correctResponse card
+                            |> Expect.equal CorrectGuess
+            , test "it returns an IncorrectGuess if answer does not match given response" <|
                 \_ ->
                     let
-                        res =
-                            "No thank you"
-
                         card =
-                            { question = "How much does a Polar Bear weigh?"
-                            , answer = "Enough to break the ice!"
-                            }
+                            { question = "How much does a polar bear weigh?", answer = "Enough to break the ice!" }
                     in
-                        { response = res, card = card }
-                            |> isCorrect
-                            |> Expect.equal False
+                        new "something something" card
+                            |> Expect.equal IncorrectGuess
             ]
         ]

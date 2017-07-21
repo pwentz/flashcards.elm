@@ -3,10 +3,18 @@ module Guess exposing (..)
 import Card exposing (Card)
 
 
-type alias Guess =
-    { response : String, card : Card }
+type Guess
+    = IncorrectGuess
+    | CorrectGuess
 
 
-isCorrect : Guess -> Bool
-isCorrect guess =
-    guess.response == guess.card.answer
+type alias UserResponse =
+    String
+
+
+new : UserResponse -> Card -> Guess
+new response card =
+    if response == (.answer card) then
+        CorrectGuess
+    else
+        IncorrectGuess
