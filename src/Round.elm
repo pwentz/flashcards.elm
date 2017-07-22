@@ -1,6 +1,16 @@
-module Round exposing (..)
+module Round
+    exposing
+        ( Round
+        , new
+        , either
+        , recordGuess
+        , guesses
+        , getDeck
+        , getPercentage
+        , currentCard
+        )
 
-import Deck exposing (Deck(EmptyDeck, Deck))
+import Deck exposing (Deck)
 import Card exposing (Card)
 import Guess exposing (Guess(IncorrectGuess, CorrectGuess))
 
@@ -10,96 +20,120 @@ type Round
     | RoundInProgress
         { deck : Deck
         , guesses : List Guess
-        , currentCard : Card
         }
 
 
-new : Deck -> Round
-new deck =
-    case deck of
-        EmptyDeck ->
-            (FinishedRound { percentCorrect = 0.0 })
+type alias Guesses =
+    List Guess
 
-        Deck [] ->
-            (FinishedRound { percentCorrect = 0.0 })
 
-        Deck ((x :: xs) as cards) ->
-            (RoundInProgress
-                { deck = Deck cards
-                , guesses = []
-                , currentCard = x
+type alias Percent =
+    Float
+
+
+type alias ProgressData =
+    { deck : Deck, guesses : Guesses }
+
+
+type alias RoundSummary =
+    { percentCorrect : Percent }
+
+
+new : ProgressData -> Round
+new { deck, guesses } =
+    case Deck.topCard deck of
+        Nothing ->
+            FinishedRound
+                { percentCorrect = getPercentage guesses }
+
+        Just _ ->
+            RoundInProgress
+                { deck = deck
+                , guesses = guesses
                 }
-            )
+
+
+either : (ProgressData -> a) -> (RoundSummary -> a) -> Round -> a
+either onInProgress onRoundOver round =
+    case round of
+        RoundInProgress progressData ->
+            onInProgress progressData
+
+        FinishedRound roundSummary ->
+            onRoundOver roundSummary
 
 
 getDeck : Round -> Maybe Deck
 getDeck round =
-    case round of
-        FinishedRound _ ->
+    let
+        onRoundOver _ =
             Nothing
 
-        RoundInProgress { deck, guesses, currentCard } ->
+        onInProgress { deck, guesses } =
             Just deck
+    in
+        either onInProgress onRoundOver round
 
 
-getCurrentCard : Round -> Maybe Card
-getCurrentCard round =
-    case round of
-        FinishedRound _ ->
+currentCard : Round -> Maybe Card
+currentCard round =
+    let
+        onRoundOver _ =
             Nothing
 
-        RoundInProgress { deck, guesses, currentCard } ->
-            Just currentCard
+        onInProgress { deck, guesses } =
+            Deck.topCard deck
+    in
+        either onInProgress onRoundOver round
 
 
-getGuesses : Round -> Maybe (List Guess)
-getGuesses round =
-    case round of
-        FinishedRound _ ->
+guesses : Round -> Maybe Guesses
+guesses round =
+    let
+        onRoundOver _ =
             Nothing
 
-        RoundInProgress { deck, guesses, currentCard } ->
+        onInProgress { deck, guesses } =
             Just guesses
+    in
+        either onInProgress onRoundOver round
 
 
-recordGuess : String -> Round -> Round
-recordGuess input round =
-    case round of
-        FinishedRound _ ->
+recordGuess : Guess -> Round -> Round
+recordGuess guess round =
+    let
+        onRoundOver _ =
             round
 
-        RoundInProgress { deck, guesses, currentCard } ->
+        onInProgress { deck, guesses } =
             let
-                guess =
-                    Guess.new input currentCard
-
                 updatedGuesses =
                     guess :: guesses
 
-                nextUp =
-                    List.head (Deck.deckTail deck)
+                rotate cards =
+                    List.take 1 cards
+                        |> List.append (List.drop 1 cards)
             in
-                case ( guess, nextUp ) of
-                    ( IncorrectGuess, maybeCard ) ->
-                        RoundInProgress
-                            { deck = Deck (List.append (Deck.deckTail deck) [ currentCard ])
-                            , guesses = updatedGuesses
-                            , currentCard = Maybe.withDefault currentCard maybeCard
+                case guess of
+                    IncorrectGuess ->
+                        new
+                            { guesses = updatedGuesses
+                            , deck =
+                                Deck.map rotate deck
                             }
 
-                    ( CorrectGuess, Just card ) ->
-                        RoundInProgress
-                            { deck = Deck (Deck.deckTail deck)
-                            , guesses = updatedGuesses
-                            , currentCard = card
+                    CorrectGuess ->
+                        new
+                            { guesses = updatedGuesses
+                            , deck =
+                                deck
+                                    |> Deck.map (List.drop 1)
                             }
-
-                    ( CorrectGuess, Nothing ) ->
-                        FinishedRound
-                            { percentCorrect = getPercentage updatedGuesses }
+    in
+        either onInProgress onRoundOver round
 
 
-getPercentage : List Guess -> Float
+getPercentage : Guesses -> Float
 getPercentage guesses =
     let
         isCorrect guess =

@@ -36,7 +36,7 @@ flashcardStyles =
         , width (px 675)
         , backgroundColor (hex Colors.flashcardBackground)
         , color (hex Colors.flashcardText)
-        , property "font-family" "'Gloria Hallelujah', cursive"
+        , property "font-family" "'Acme', sans-serif"
         ]
 
 
@@ -51,7 +51,7 @@ questionContainerStyles =
     styles
         [ margin auto
         , width (pct 75)
-        , fontSize (px 28)
+        , fontSize (px 32)
         ]
 
 

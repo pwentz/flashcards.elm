@@ -4,9 +4,9 @@ import Html exposing (..)
 import Html.Events exposing (onInput, onClick, on, keyCode)
 import Html.Attributes exposing (..)
 import Json.Decode as Json
-import Round exposing (Round(FinishedRound, RoundInProgress))
+import Round exposing (Round)
 import Guess exposing (Guess(IncorrectGuess, CorrectGuess))
-import Deck exposing (Deck(Deck, EmptyDeck))
+import Deck exposing (Deck)
 import Card exposing (Card)
 import Samples
 import Styles
@@ -34,7 +34,11 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    { round = Round.new (Deck.new Samples.cards)
+    { round =
+        Round.new
+            { deck = (Deck.new Samples.cards)
+            , guesses = []
+            }
     , input = ""
     , message = "Enter your response and press ENTER!"
     , display =
@@ -126,13 +130,11 @@ type Msg
     | NextQuestion
 
 
-updateDisplayWithScore : Model -> Float -> Model
-updateDisplayWithScore model percentCorrect =
-    let
-        congrats =
-            "Congratulations! You racked up a score of "
-    in
-        { model | display = congrats ++ (toString percentCorrect) ++ "%" }
+congratsMsg : Float -> String
+congratsMsg pct =
+    "Congratulations! You were correct on "
+        ++ (toString pct)
+        ++ "% of your guesses!"
 
 
 update : Msg -> Model -> Model
@@ -142,39 +144,54 @@ update msg model =
             { model | input = userInput }
 
         RecordGuess ->
-            case (Round.recordGuess (.input model) (.round model)) of
-                (FinishedRound { percentCorrect }) as newRound ->
-                    (updateDisplayWithScore
-                        { model
-                            | input = ""
-                            , round = newRound
-                            , message = "Game Over!"
-                        }
-                        percentCorrect
-                    )
+            case (Round.currentCard model.round) of
+                Nothing ->
+                    { model | input = "" }
 
-                (RoundInProgress { deck, guesses, currentCard }) as newRound ->
+                Just card ->
                     let
-                        lastGuess =
-                            Guess.new (.input model) currentCard
-                    in
-                        case lastGuess of
-                            IncorrectGuess ->
-                                { model
-                                    | input = ""
-                                    , round = newRound
-                                    , message = "Incorrect!"
-                                }
+                        guess =
+                            Guess.new model.input card
 
-                            CorrectGuess ->
-                                { input = ""
-                                , round = newRound
-                                , message = "Correct!"
-                                , display = .question currentCard
-                                }
+                        updatedModel =
+                            { model
+                                | input = ""
+                                , round = Round.recordGuess guess model.round
+                            }
+
+                        nextQuestion =
+                            updatedModel.round
+                                |> Round.currentCard
+                                |> Maybe.map .question
+
+                        onRoundOver { percentCorrect } =
+                            { updatedModel
+                                | message = "Game Over!"
+                                , display = congratsMsg percentCorrect
+                            }
+
+                        onInProgress { deck, guesses } =
+                            case guess of
+                                IncorrectGuess ->
+                                    { updatedModel
+                                        | message = "Incorrect!"
+                                        , display =
+                                            nextQuestion
+                                                |> Maybe.withDefault card.question
+                                    }
+
+                                CorrectGuess ->
+                                    { updatedModel
+                                        | message = "Correct!"
+                                        , display =
+                                            nextQuestion
+                                                |> Maybe.withDefault (congratsMsg (Round.getPercentage guesses))
+                                    }
+                    in
+                        Round.either onInProgress onRoundOver updatedModel.round
 
         SeeAnswer ->
-            case (Round.getCurrentCard (.round model)) of
+            case (Round.currentCard model.round) of
                 Nothing ->
                     model
 
@@ -182,112 +199,24 @@ update msg model =
                     { model | display = answer }
 
         NextQuestion ->
-            case (Round.getDeck (.round model)) of
-                Nothing ->
+            let
+                onRoundOver _ =
                     model
 
-                Just EmptyDeck ->
-                    model
-
-                Just (Deck []) ->
-                    model
-
-                Just (Deck (x :: xs)) ->
-                    let
-                        current =
-                            xs
-                                |> List.head
-                                |> Maybe.withDefault x
-                    in
-                        { input = ""
-                        , display = .question current
-                        , message = ""
-                        , round =
-                            RoundInProgress
-                                { deck = Deck.new (List.append xs [ x ])
-                                , currentCard = current
-                                , guesses =
-                                    (.round model)
-                                        |> Round.getGuesses
-                                        |> Maybe.withDefault []
-                                }
-                        }
-
-
-
--- update : Msg -> Model -> Model
--- update msg model =
---     case msg of
---         UpdateField userInput ->
---             { model | input = userInput }
---         RecordGuess ->
---             case ((.currentCard << .round) model) of
---                 Nothing ->
---                     { model
---                         | input = ""
---                         , message = "Game over!"
---                     }
---                 Just card ->
---                     case (Round.recordGuess (.input model) (.round model)) of
---                         Nothing ->
---                             model
---                         Just updatedRound ->
---                             case (Guess.new (.input model) card) of
---                                 IncorrectGuess ->
---                                     let
---                                         newModel =
---                                             { model
---                                                 | input = ""
---                                                 , round = updatedRound
---                                                 , message = "Incorrect!"
---                                             }
---                                     in
---                                         case (.currentCard updatedRound) of
---                                             Nothing ->
---                                                 newModel
---                                             Just currentCard ->
---                                                 { newModel | display = .question currentCard }
---                                 CorrectGuess ->
---                                     let
---                                         newModel =
---                                             { model
---                                                 | input = ""
---                                                 , round = updatedRound
---                                                 , message = "Correct!"
---                                             }
---                                     in
---                                         case (.currentCard updatedRound) of
---                                             Nothing ->
---                                                 updateDisplayWithScore newModel
---                                             Just currentCard ->
---                                                 { newModel | display = .question currentCard }
---         SeeAnswer ->
---             case ((.currentCard << .round) model) of
---                 Nothing ->
---                     model
---                 Just card ->
---                     { model | display = (.answer card) }
---         NextQuestion ->
---             case ((.currentCard << .round) model) of
---                 Nothing ->
---                     model
---                 Just card ->
---                     let
---                         round =
---                             (.round model)
---                         newDeck =
---                             Deck (List.append (Deck.deckTail (.deck round)) [ card ])
---                     in
---                         { round =
---                             { round
---                                 | deck = newDeck
---                                 , currentCard = Deck.topCard newDeck
---                             }
---                         , display =
---                             newDeck
---                                 |> Deck.topCard
---                                 |> Maybe.map .question
---                                 |> Maybe.withDefault ""
---                         , input = ""
---                         , message = ""
---                         }
+                onInProgress { deck, guesses } =
+                    { input = ""
+                    , message = ""
+                    , round =
+                        Round.new
+                            { deck = Deck.rotate deck
+                            , guesses = guesses
+                            }
+                    , display =
+                        deck
+                            |> Deck.rotate
+                            |> Deck.topCard
+                            |> Maybe.map .question
+                            |> Maybe.withDefault (congratsMsg (Round.getPercentage guesses))
+                    }
+            in
+                Round.either onInProgress onRoundOver model.round

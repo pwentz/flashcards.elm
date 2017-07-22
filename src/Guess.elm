@@ -14,7 +14,7 @@ type alias UserResponse =
 
 new : UserResponse -> Card -> Guess
 new response card =
-    if response == (.answer card) then
+    if response == card.answer then
         CorrectGuess
     else
         IncorrectGuess
