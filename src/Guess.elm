@@ -8,11 +8,7 @@ type Guess
     | CorrectGuess
 
 
-type alias UserResponse =
-    String
-
-
-new : UserResponse -> Card -> Guess
+new : String -> Card -> Guess
 new response card =
     if response == (.answer card) then
         CorrectGuess
