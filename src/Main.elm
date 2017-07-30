@@ -1,6 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (..)
+import Http as Http
 import Html.Events exposing (onInput, onClick, on, keyCode)
 import Html.Attributes exposing (..)
 import Json.Decode as Json
@@ -8,16 +9,21 @@ import Round exposing (Round)
 import Guess exposing (Guess(IncorrectGuess, CorrectGuess))
 import Deck exposing (Deck)
 import Card exposing (Card)
-import Samples
 import Styles
 
 
 main =
-    beginnerProgram
-        { model = initialModel
+    program
+        { init = init
         , view = view
         , update = update
+        , subscriptions = subscriptions
         }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
 
 
 
@@ -32,21 +38,19 @@ type alias Model =
     }
 
 
-initialModel : Model
-initialModel =
-    { round =
-        Round.new
-            { deck = (Deck.new Samples.cards)
-            , guesses = []
-            }
-    , input = ""
-    , message = "Enter your response and press ENTER!"
-    , display =
-        Samples.cards
-            |> List.head
-            |> Maybe.map .question
-            |> Maybe.withDefault ""
-    }
+init : ( Model, Cmd Msg )
+init =
+    ( { round =
+            Round.new
+                { deck = Deck.new []
+                , guesses = []
+                }
+      , input = ""
+      , message = "Enter your response and press ENTER!"
+      , display = "Fetching Questions..."
+      }
+    , fetchQuestions
+    )
 
 
 
@@ -123,11 +127,39 @@ view model =
 -- UPDATE
 
 
+type alias TriviaQuestion =
+    { question : String
+    , correct_answer : String
+    }
+
+
 type Msg
     = UpdateField String
     | RecordGuess
     | SeeAnswer
     | NextQuestion
+    | NewQuestions (Result Http.Error (List TriviaQuestion))
+
+
+questionDecoder =
+    Json.map2 TriviaQuestion (Json.field "question" Json.string) (Json.field "correct_answer" Json.string)
+
+
+fetchQuestions : Cmd Msg
+fetchQuestions =
+    let
+        url =
+            "https://opentdb.com/api.php?amount=10"
+
+        request =
+            Http.get url decodeQuestions
+    in
+        Http.send NewQuestions request
+
+
+decodeQuestions : Json.Decoder (List TriviaQuestion)
+decodeQuestions =
+    Json.at [ "results" ] (Json.list questionDecoder)
 
 
 congratsMsg : Float -> String
@@ -137,16 +169,16 @@ congratsMsg pct =
         ++ "% of your guesses!"
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         UpdateField userInput ->
-            { model | input = userInput }
+            ( { model | input = userInput }, Cmd.none )
 
         RecordGuess ->
             case (Round.currentCard model.round) of
                 Nothing ->
-                    { model | input = "" }
+                    ( { model | input = "" }, Cmd.none )
 
                 Just card ->
                     let
@@ -188,15 +220,15 @@ update msg model =
                                                 |> Maybe.withDefault (congratsMsg (Round.getPercentage guesses))
                                     }
                     in
-                        Round.either onInProgress onRoundOver updatedModel.round
+                        ( (Round.either onInProgress onRoundOver updatedModel.round), Cmd.none )
 
         SeeAnswer ->
             case (Round.currentCard model.round) of
                 Nothing ->
-                    model
+                    ( model, Cmd.none )
 
                 Just { question, answer } ->
-                    { model | display = answer }
+                    ( { model | display = answer }, Cmd.none )
 
         NextQuestion ->
             let
@@ -204,19 +236,47 @@ update msg model =
                     model
 
                 onInProgress { deck, guesses } =
-                    { input = ""
-                    , message = ""
-                    , round =
-                        Round.new
-                            { deck = Deck.rotate deck
-                            , guesses = guesses
-                            }
-                    , display =
-                        deck
-                            |> Deck.rotate
-                            |> Deck.topCard
-                            |> Maybe.map .question
-                            |> Maybe.withDefault (congratsMsg (Round.getPercentage guesses))
+                    { model
+                        | input = ""
+                        , message = ""
+                        , round =
+                            Round.new
+                                { deck = Deck.rotate deck
+                                , guesses = guesses
+                                }
+                        , display =
+                            deck
+                                |> Deck.rotate
+                                |> Deck.topCard
+                                |> Maybe.map .question
+                                |> Maybe.withDefault (congratsMsg (Round.getPercentage guesses))
                     }
             in
-                Round.either onInProgress onRoundOver model.round
+                ( (Round.either onInProgress onRoundOver model.round), Cmd.none )
+
+        NewQuestions (Ok questions) ->
+            let
+                cards =
+                    questions
+                        |> List.map
+                            (\x ->
+                                { question = x.question, answer = x.correct_answer }
+                            )
+            in
+                ( { model
+                    | round =
+                        Round.new
+                            { deck = (Deck.new cards)
+                            , guesses = []
+                            }
+                    , display =
+                        cards
+                            |> List.head
+                            |> Maybe.map .question
+                            |> Maybe.withDefault "Something went wrong while we were fetching your questions!"
+                  }
+                , Cmd.none
+                )
+
+        NewQuestions (Err _) ->
+            ( model, Cmd.none )

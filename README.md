@@ -46,6 +46,7 @@ elm test
 ```
 
 
-#### Cards
+#### Trivia
 
-Until I can add a feature to read in CSVs, the flashcards are read from the `src/Samples.elm` file.
+The flashcards are generated from a trivia database that gets hit through an HTTP request when the app is initally launched.
+I plan to add functionality in the future that allows the user to upload a CSV of their expected questions.
