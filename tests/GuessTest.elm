@@ -11,65 +11,24 @@ suite : Test
 suite =
     describe "Guess"
         [ describe "new"
-            [ test "it returns an IncorrectGuess if response matches answer" <|
+            [ test "it returns a CorrectGuess if answer on given card matches given response" <|
                 \_ ->
                     let
-                        res =
-                            "250 pounds"
-
-                        q =
-                            "How much does a Polar Bear weigh?"
-
-                        a =
-                            "Enough to break the ice!"
-                    in
-                        new res (Card.new q a)
-                            |> Expect.equal IncorrectGuess
-            , test "it returns a CorrectGuess if response does not match answer" <|
-                \_ ->
-                    let
-                        res =
+                        correctResponse =
                             "Enough to break the ice!"
 
-                        q =
-                            "How much does a Polar Bear weigh?"
-
-                        a =
-                            res
+                        card =
+                            { question = "How much does a polar bear weigh?", answer = correctResponse }
                     in
-                        new res (Card.new q a)
+                        new correctResponse card
                             |> Expect.equal CorrectGuess
-            ]
-        , describe "isCorrect"
-            [ test "it returns True if constructor is a CorrectGuess" <|
+            , test "it returns an IncorrectGuess if answer does not match given response" <|
                 \_ ->
                     let
-                        res =
-                            "Enough to break the ice!"
-
-                        q =
-                            "How much does a Polar Bear weigh?"
-
-                        a =
-                            res
+                        card =
+                            { question = "How much does a polar bear weigh?", answer = "Enough to break the ice!" }
                     in
-                        new res (Card.new q a)
-                            |> isCorrect
-                            |> Expect.equal True
-            , test "it returns False if constructor is IncorrectGuess" <|
-                \_ ->
-                    let
-                        res =
-                            "I don't know."
-
-                        q =
-                            "How much does a Polar Bear weigh?"
-
-                        a =
-                            "Enough to break the ice!"
-                    in
-                        new res (Card.new q a)
-                            |> isCorrect
-                            |> Expect.equal False
+                        new "something something" card
+                            |> Expect.equal IncorrectGuess
             ]
         ]

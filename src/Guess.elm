@@ -8,19 +8,13 @@ type Guess
     | CorrectGuess
 
 
-new : String -> Card -> Guess
+type alias UserResponse =
+    String
+
+
+new : UserResponse -> Card -> Guess
 new response card =
-    if response == (Card.answer card) then
+    if response == card.answer then
         CorrectGuess
     else
         IncorrectGuess
-
-
-isCorrect : Guess -> Bool
-isCorrect guess =
-    case guess of
-        IncorrectGuess ->
-            False
-
-        CorrectGuess ->
-            True

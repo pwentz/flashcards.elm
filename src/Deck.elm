@@ -1,22 +1,61 @@
-module Deck exposing (..)
+module Deck
+    exposing
+        ( Deck
+        , new
+        , map
+        , topCard
+        , rotate
+        )
 
 import Card exposing (Card)
 
 
 type Deck
-    = Deck (List Card)
+    = EmptyDeck
+    | Deck Cards
 
 
-new : List Card -> Deck
+type alias Cards =
+    List Card
+
+
+new : Cards -> Deck
 new cards =
-    Deck cards
+    case cards of
+        [] ->
+            EmptyDeck
+
+        xs ->
+            Deck xs
 
 
-cards : Deck -> List Card
-cards (Deck cs) =
-    cs
+map : (Cards -> Cards) -> Deck -> Deck
+map f deck =
+    case deck of
+        EmptyDeck ->
+            EmptyDeck
+
+        Deck xs ->
+            Deck (f xs)
 
 
-count : Deck -> Int
-count (Deck cs) =
-    List.length cs
+topCard : Deck -> Maybe Card
+topCard deck =
+    case deck of
+        EmptyDeck ->
+            Nothing
+
+        Deck [] ->
+            Nothing
+
+        Deck (x :: _) ->
+            Just x
+
+
+rotate : Deck -> Deck
+rotate deck =
+    map
+        (\xs ->
+            List.append (List.drop 1 xs) (List.take 1 xs)
+        )
+        deck
