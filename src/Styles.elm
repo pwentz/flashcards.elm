@@ -83,6 +83,12 @@ nextQuestionStyles =
         [ backgroundColor (hex Colors.nextQuestionButton) ]
 
 
+replayStyles : Attribute msg
+replayStyles =
+    styles
+        [ backgroundColor (hex Colors.nextQuestionButton) ]
+
+
 buttonStyles : Attribute msg
 buttonStyles =
     styles
