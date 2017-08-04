@@ -1,0 +1,12 @@
+{
+  "name": "Flashcards in Elm",
+  "repository": "https://github.com/pwentz/flashcards.elm",
+  "env": {
+    "ELM_COMPILE": "elm make src/Main.elm --output app.js"
+  },
+  "buildpacks": [
+    {
+      "url": "https://github.com/srid/heroku-buildpack-elm.git"
+    }
+  ]
+}
