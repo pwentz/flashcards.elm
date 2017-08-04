@@ -35,6 +35,7 @@ type alias Model =
     , input : String
     , message : String
     , display : String
+    , inProgress : Bool
     }
 
 
@@ -48,6 +49,7 @@ init =
       , input = ""
       , message = "Enter your response and press ENTER!"
       , display = "Fetching Questions..."
+      , inProgress = True
       }
     , fetchQuestions
     )
@@ -55,6 +57,39 @@ init =
 
 
 -- VIEW
+
+
+actionButtons : Model -> Html Msg
+actionButtons model =
+    if model.inProgress then
+        div
+            []
+            [ button
+                [ type_ "submit"
+                , onClick SeeAnswer
+                , Styles.buttonStyles
+                , Styles.viewAnswerStyles
+                ]
+                [ text "View Answer" ]
+            , button
+                [ type_ "submit"
+                , onClick NextQuestion
+                , Styles.buttonStyles
+                , Styles.nextQuestionStyles
+                ]
+                [ text "Next Question" ]
+            ]
+    else
+        div
+            []
+            [ button
+                [ type_ "submit"
+                , onClick Replay
+                , Styles.buttonStyles
+                , Styles.replayStyles
+                ]
+                [ text "Replay" ]
+            ]
 
 
 onEnter : Msg -> Attribute Msg
@@ -91,20 +126,7 @@ view model =
                     [ text (.display model) ]
                 ]
             ]
-        , button
-            [ type_ "submit"
-            , onClick SeeAnswer
-            , Styles.buttonStyles
-            , Styles.viewAnswerStyles
-            ]
-            [ text "View Answer" ]
-        , button
-            [ type_ "submit"
-            , onClick NextQuestion
-            , Styles.buttonStyles
-            , Styles.nextQuestionStyles
-            ]
-            [ text "Next Question" ]
+        , actionButtons model
         , br [] []
         , input
             [ type_ "text"
@@ -135,6 +157,7 @@ type alias TriviaQuestion =
 
 type Msg
     = UpdateField String
+    | Replay
     | RecordGuess
     | SeeAnswer
     | NextQuestion
@@ -200,6 +223,7 @@ update msg model =
                             { updatedModel
                                 | message = "Game Over!"
                                 , display = congratsMsg percentCorrect
+                                , inProgress = False
                             }
 
                         onInProgress { deck, guesses } =
@@ -280,3 +304,6 @@ update msg model =
 
         NewQuestions (Err _) ->
             ( model, Cmd.none )
+
+        Replay ->
+            init
